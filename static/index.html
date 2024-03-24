@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang=”en”>
+
+<head>
+    <meta charset=”UTF-8” />
+    <meta name=”viewport” content=”width=device-width, initial-scale=1.0” />
+    <title>WebRTC</title>
+    <link rel="stylesheet" href="https://cdn.staticfile.net/twitter-bootstrap/4.3.1/css/bootstrap.min.css">
+    <script src="https://cdn.staticfile.net/jquery/3.2.1/jquery.min.js"></script>
+    <script src="https://cdn.staticfile.net/twitter-bootstrap/4.3.1/js/bootstrap.min.js"></script>
+    <link href="https://cdn.bootcdn.net/ajax/libs/plyr/3.7.8/plyr.min.css" rel="stylesheet">
+    <script src="https://cdn.bootcdn.net/ajax/libs/plyr/3.7.8/plyr.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+        #video-body .plyr__progress,
+        #video-body .plyr__time {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="message" class="alert alert-success alert-dismissible fade float-right">
+        <button type="button" class="close" data-dismiss="alert">&times;</button>
+        <strong>提示：</strong><span id="message-body">指定操作成功提示信息。</span>
+    </div>
+    <div id="join-body" class="container col-sm-4" style="padding-top: 10%;">
+        <div>
+            <div class="form-group">
+                <label for="roomIdEl">房间号:</label>
+                <input type="text" class="form-control" id="roomIdEl">
+            </div>
+            <div class="form-group">
+                <label for="userNameEl">用户名:</label>
+                <input type="text" class="form-control" id="userNameEl">
+            </div>
+            <button id="join-but" type="button" class="btn btn-primary btn-block">
+                <div id="join-msg">加入房间</div>
+                <div id="wait-join" style="display: none;">
+                    <span class="spinner-border spinner-border-sm"></span>
+                    等待其他用户加入..
+                </div>
+            </button>
+        </div>
+    </div>
+
+    <div id="video-body" class="container col-sm-8" style="display: none;">
+        <h3>正在共享中....</h3>
+        <video autoplay id="srcVideo" width="100%"></video>
+    </div>
+
+    <script src="/js/index.js"></script>
+    <script>
+        const player = new Plyr('#srcVideo');
+        var roomId = randomString(4) + "-" + randomString(4) + "-" + randomString(4);
+        var userName = randomString(5);
+        var ready = false;
+        var master = false;
+
+        // 等待其他人加入
+        function waitReady() {
+            $("#join-but").attr("disabled", "disabled");
+            $("#join-msg").hide();
+            $("#wait-join").show();
+        }
+
+        // 其他人加入后就绪
+        function onReady() {
+            $("#join-but").prop("disabled", false);
+            $("#join-msg").show();
+            $("#wait-join").hide();
+
+            $("#join-body").hide();
+            $("#video-body").show();
+
+            if (master) {
+                navigator.mediaDevices.getDisplayMedia().then(stream => {
+                    console.log("获取本地屏幕共享媒体数据");
+                    let srcStream = stream;
+                    srcVideo.srcObject = stream;
+
+                    // 绑定本地媒体数据到pc对象上
+                    srcStream.getTracks().forEach(track => {
+                        pc.addTrack(track, srcStream);
+                    });
+                }).then(() => {
+                    createOffer(pc);
+                }).catch((err) => {
+                    console.error(err);
+                });
+            }
+        }
+
+        $(function () {
+
+            // 初始化用户名和房间id
+            $("#roomIdEl").val(roomId);
+            $("#userNameEl").val(userName);
+
+            // 进入房间
+            $("#join-but").click((event) => {
+                roomId = $("#roomIdEl").val();
+                userName = $("#userNameEl").val();
+                ws.emit("join", { roomId, userName });
+            });
+        });
+
+        // setInterval(() => {
+        //     showMessage(`pc状态：${pc.connectionState}`);
+        // }, 1000);
+    </script>
+</body>
+
+</html>
