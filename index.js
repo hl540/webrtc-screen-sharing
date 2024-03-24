@@ -15,6 +15,6 @@ io.on('connection', (socket) => {
 
 app.use('/', express.static('static'));
 
-server.listen(3000, () => {
+server.listen(9632, () => {
     console.log('server running at http://127.0.0.1:9632');
 });
